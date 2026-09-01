@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NW Doces&Salgados — Peça pelo WhatsApp</title>
+<meta name="description" content="Trufas artesanais, cones trufados, palha italiana e esfirras feitas com carinho. Monte seu pedido e receba direto no seu endereço.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%AB%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          cocoa:  { DEFAULT: '#3A2519', soft: '#6B4B3A', 50: '#F7EEE8' },
+          berry:  { DEFAULT: '#B33951', dark: '#8C2C40', light: '#F6DFE4' },
+          gold:   { DEFAULT: '#D6A44C', soft: '#F1DDB3' },
+          cream:  { DEFAULT: '#FFF6EF', line: '#F0DFCF' },
+        },
+        fontFamily: {
+          display: ['"Fraunces"', 'serif'],
+          body: ['"Plus Jakarta Sans"', 'sans-serif'],
+        },
+        boxShadow: {
+          soft: '0 8px 24px -12px rgba(58, 37, 25, 0.35)',
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  :root { color-scheme: light; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #FFF6EF; }
+  .font-display { font-family: 'Fraunces', serif; }
+
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid #B33951;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .cart-scroll::-webkit-scrollbar { width: 6px; }
+  .cart-scroll::-webkit-scrollbar-thumb { background: #F0DFCF; border-radius: 999px; }
+
+  #cart-drawer { transform: translateY(100%); transition: transform 0.35s cubic-bezier(.32,.72,0,1); }
+  #cart-drawer.open { transform: translateY(0); }
+  #cart-overlay { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+  #cart-overlay.open { opacity: 1; pointer-events: auto; }
+
+  #floating-bar { transform: translateY(120%); transition: transform 0.3s cubic-bezier(.32,.72,0,1); }
+  #floating-bar.visible { transform: translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    #cart-drawer, #cart-overlay, #floating-bar, .qty-pulse { transition: none !important; animation: none !important; }
+  }
+
+  @keyframes qtyPulse { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  .qty-pulse { animation: qtyPulse 0.22s ease; }
+
+  .qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+</style>
+</head>
+
+<body class="text-cocoa antialiased">
+
+<!-- =========================================================
+     CABEÇALHO
+========================================================= -->
+<header class="sticky top-0 z-30 bg-cocoa text-cream shadow-soft">
+  <div class="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-3xl leading-none" aria-hidden="true">🍫</span>
+      <div>
+        <p class="font-display text-xl sm:text-2xl leading-none tracking-tight">NW Doces&amp;Salgados</p>
+        <p class="text-[11px] sm:text-xs text-gold-soft mt-0.5">Feito à mão, entregue com carinho</p>
+      </div>
+    </div>
+
+    <button id="open-cart-btn" type="button"
+      class="relative flex items-center gap-2 bg-berry hover:bg-berry-dark active:scale-95 transition rounded-full pl-3 pr-4 py-2"
+      aria-label="Abrir carrinho de pedidos">
+      <span class="text-lg" aria-hidden="true">🧺</span>
+      <span class="text-sm font-semibold">Carrinho</span>
+      <span id="header-cart-count"
+        class="absolute -top-1.5 -right-1.5 bg-gold text-cocoa text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
+    </button>
+  </div>
+</header>
+
+<!-- =========================================================
+     HERÓI
+========================================================= -->
+<section class="bg-cocoa text-cream">
+  <div class="max-w-5xl mx-auto px-5 pt-8 pb-14 sm:pt-12 sm:pb-20">
+    <p class="text-gold text-sm font-semibold mb-2">Trufas · Cones · Palha italiana · Esfirras</p>
+    <h1 class="font-display text-[2.1rem] leading-[1.08] sm:text-5xl sm:leading-[1.05] max-w-xl">
+      Doce de vó, salgado de festa e um WhatsApp de distância.
+    </h1>
+    <p class="mt-4 text-cream/80 max-w-md text-[15px] sm:text-base">
+      Monte seu pedido aqui do jeitinho que quiser. No final, é só confirmar
+      nome e endereço — a gente recebe direto no nosso WhatsApp.
+    </p>
+  </div>
+
+  <svg viewBox="0 0 1200 60" preserveAspectRatio="none" class="w-full h-8 sm:h-10 block" aria-hidden="true">
+    <path d="M0,20 C150,60 300,-10 450,20 C600,50 750,-10 900,20 C1000,42 1100,5 1200,20 L1200,60 L0,60 Z"
+      fill="#FFF6EF"></path>
+    <path d="M0,18 C150,56 300,-8 450,18 C600,46 750,-8 900,18 C1000,38 1100,6 1200,18"
+      fill="none" stroke="#D6A44C" stroke-width="3" stroke-linecap="round" opacity="0.9"></path>
+  </svg>
+</section>
+
+<!-- =========================================================
+     CATÁLOGO
+========================================================= -->
+<main class="max-w-5xl mx-auto px-5 pb-32">
+
+  <section class="pt-10 sm:pt-14" aria-labelledby="cat-trad">
+    <div class="flex items-baseline gap-3 mb-1">
+      <span class="text-2xl" aria-hidden="true">🍫</span>
+      <h2 id="cat-trad" class="font-display text-2xl sm:text-3xl">Trufas Tradicionais</h2>
+    </div>
+    <div id="price-badge-trufas-tradicionais" class="pricing-badge"></div>
+    <div id="grid-trufas-tradicionais" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+  </section>
+
+  <section class="pt-12 sm:pt-16 border-t border-cream-line mt-12" aria-labelledby="cat-gourmet">
+    <div class="flex items-baseline gap-3 mb-1">
+      <span class="text-2xl" aria-hidden="true">✨</span>
+      <h2 id="cat-gourmet" class="font-display text-2xl sm:text-3xl">Trufas Gourmet</h2>
+    </div>
+    <div id="price-badge-trufas-gourmet" class="pricing-badge"></div>
+    <div id="grid-trufas-gourmet" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+  </section>
+
+  <section class="pt-12 sm:pt-16 border-t border-cream-line mt-12" aria-labelledby="cat-cones">
+    <div class="flex items-baseline gap-3 mb-1">
+      <span class="text-2xl" aria-hidden="true">🍦</span>
+      <h2 id="cat-cones" class="font-display text-2xl sm:text-3xl">Cones Trufados</h2>
+    </div>
+    <div id="price-badge-cones-trufados" class="pricing-badge"></div>
+    <div id="grid-cones-trufados" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+  </section>
+
+  <section class="pt-12 sm:pt-16 border-t border-cream-line mt-12" aria-labelledby="cat-palha">
+    <div class="flex items-baseline gap-3 mb-1">
+      <span class="text-2xl" aria-hidden="true">🍬</span>
+      <h2 id="cat-palha" class="font-display text-2xl sm:text-3xl">Palha Italiana</h2>
+    </div>
+    <div id="price-badge-palha-italiana" class="pricing-badge"></div>
+    <div id="grid-palha-italiana" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+  </section>
+
+  <section class="pt-12 sm:pt-16 border-t border-cream-line mt-12" aria-labelledby="cat-esfirras">
+    <div class="flex items-baseline gap-3 mb-1">
+      <span class="text-2xl" aria-hidden="true">🥟</span>
+      <h2 id="cat-esfirras" class="font-display text-2xl sm:text-3xl">Esfirras Artesanais</h2>
+    </div>
+    <div id="price-badge-esfirras" class="pricing-badge"></div>
+    <div id="grid-esfirras" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+  </section>
+
+</main>
+
+<footer class="bg-cocoa text-cream/70 text-center text-xs py-6 px-5">
+  <p>NW Doces&amp;Salgados · Pedidos combinados diretamente pelo WhatsApp</p>
+  <p class="mt-1"><a href="/admin.html" class="underline underline-offset-2">Painel de estoque</a></p>
+</footer>
+
+<!-- =========================================================
+     BARRA FLUTUANTE DO CARRINHO
+========================================================= -->
+<button id="floating-bar" type="button"
+  class="fixed left-0 right-0 bottom-0 z-30 bg-berry text-cream shadow-soft px-5 py-4 flex items-center justify-between"
+  aria-label="Ver carrinho de pedidos">
+  <span class="text-sm">
+    <span id="floating-count" class="font-bold">0</span> item(ns)
+  </span>
+  <span class="font-display text-lg" id="floating-total">R$ 0,00</span>
+  <span class="text-sm font-semibold bg-cream text-berry px-3 py-1.5 rounded-full">Ver carrinho</span>
+</button>
+
+<!-- =========================================================
+     OVERLAY + DRAWER DO CARRINHO / CHECKOUT
+========================================================= -->
+<div id="cart-overlay" class="fixed inset-0 bg-cocoa/50 z-40"></div>
+
+<div id="cart-drawer"
+  class="fixed left-0 right-0 bottom-0 z-50 bg-cream rounded-t-3xl shadow-soft max-w-lg mx-auto w-full max-h-[85vh] flex flex-col"
+  role="dialog" aria-modal="true" aria-label="Carrinho de pedidos">
+
+  <div class="flex justify-center pt-3 pb-1" aria-hidden="true">
+    <span class="w-10 h-1.5 rounded-full bg-cream-line"></span>
+  </div>
+
+  <div id="view-cart" class="flex flex-col overflow-hidden flex-1">
+    <div class="flex items-center justify-between px-5 pt-2 pb-3">
+      <h2 class="font-display text-xl">Seu pedido</h2>
+      <button id="close-cart-btn" type="button" class="text-cocoa-soft text-sm font-semibold px-2 py-1" aria-label="Fechar carrinho">
+        Fechar ✕
+      </button>
+    </div>
+
+    <div id="cart-items" class="cart-scroll px-5 space-y-4 overflow-y-auto flex-1 pb-3"></div>
+
+    <div id="cart-empty" class="px-5 pb-6 text-center text-cocoa-soft text-sm hidden">
+      Seu carrinho está vazio. Escolha algo gostoso ali em cima 👆
+    </div>
+
+    <div class="px-5 pt-3 pb-5 border-t border-cream-line bg-cream">
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-cocoa-soft text-sm">Total do pedido</span>
+        <span id="cart-total" class="font-display text-2xl">R$ 0,00</span>
+      </div>
+      <button id="go-to-checkout-btn" type="button"
+        class="w-full bg-berry hover:bg-berry-dark disabled:opacity-40 disabled:pointer-events-none text-cream font-semibold py-3.5 rounded-full transition active:scale-[0.98]">
+        Continuar para entrega
+      </button>
+    </div>
+  </div>
+
+  <div id="view-checkout" class="hidden flex-col overflow-hidden flex-1">
+    <div class="flex items-center gap-2 px-5 pt-2 pb-3">
+      <button id="back-to-cart-btn" type="button" class="text-cocoa-soft text-lg px-1" aria-label="Voltar ao carrinho">←</button>
+      <h2 class="font-display text-xl">Dados para entrega</h2>
+    </div>
+
+    <form id="checkout-form" class="px-5 space-y-4 overflow-y-auto flex-1 pb-3" novalidate>
+      <div>
+        <label for="customer-name" class="block text-sm font-semibold mb-1.5">Seu nome</label>
+        <input id="customer-name" name="customer-name" type="text" required autocomplete="name"
+          placeholder="Ex.: Ana Souza"
+          class="w-full border border-cream-line bg-white rounded-xl px-4 py-3 text-sm placeholder:text-cocoa-soft/50">
+        <p id="error-name" class="text-berry text-xs mt-1 hidden">Por favor, digite seu nome.</p>
+      </div>
+
+      <div>
+        <label for="customer-address" class="block text-sm font-semibold mb-1.5">Endereço de entrega</label>
+        <textarea id="customer-address" name="customer-address" rows="3" required autocomplete="street-address"
+          placeholder="Rua, número, bairro, complemento e ponto de referência"
+          class="w-full border border-cream-line bg-white rounded-xl px-4 py-3 text-sm placeholder:text-cocoa-soft/50 resize-none"></textarea>
+        <p id="error-address" class="text-berry text-xs mt-1 hidden">Por favor, digite o endereço de entrega.</p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-cream-line p-4 text-sm">
+        <p class="font-semibold mb-2">Resumo</p>
+        <div id="checkout-summary" class="space-y-2 text-cocoa-soft"></div>
+        <div class="flex justify-between items-center mt-3 pt-3 border-t border-cream-line font-semibold text-cocoa">
+          <span>Total</span>
+          <span id="checkout-total">R$ 0,00</span>
+        </div>
+      </div>
+    </form>
+
+    <div class="px-5 pt-3 pb-5 border-t border-cream-line bg-cream">
+      <button id="send-whatsapp-btn" type="button"
+        class="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:brightness-95 text-white font-semibold py-3.5 rounded-full transition active:scale-[0.98]">
+        <span aria-hidden="true">📲</span> Enviar pedido pelo WhatsApp
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Config compartilhada (catálogo, preços, WhatsApp) -->
+<script src="products-data.js"></script>
+
+<script>
+/* =============================================================
+   LOJA — carrinho, estoque (via API) e envio para o WhatsApp
+============================================================= */
+
+// { [productId]: quantidade } escolhida pelo cliente
+let cart = {};
+
+// { [productId]: quantidade disponível } vindo da API /api/stock.
+// Um sabor que NÃO aparece aqui é tratado como estoque ilimitado —
+// assim, se a API falhar, a loja continua vendendo normalmente.
+let stock = {};
+
+function formatBRL(value) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function getProduct(id) {
+  return PRODUCTS.find((p) => p.id === id);
+}
+
+function hasStockLimit(id) {
+  return Object.prototype.hasOwnProperty.call(stock, id);
+}
+function getMaxQty(id) {
+  return hasStockLimit(id) ? Math.max(0, stock[id]) : Infinity;
+}
+function isOutOfStock(id) {
+  return hasStockLimit(id) && stock[id] <= 0;
+}
+
+function getCategoryQty(categoryId) {
+  return PRODUCTS
+    .filter((p) => p.category === categoryId)
+    .reduce((sum, p) => sum + (cart[p.id] || 0), 0);
+}
+
+function calcCategoryTotal(categoryId) {
+  const qty = getCategoryQty(categoryId);
+  const pricing = CATEGORY_PRICING[categoryId];
+  if (!pricing || qty === 0) return 0;
+  const pairs = Math.floor(qty / 2);
+  const remainder = qty % 2;
+  return pairs * pricing.pair + remainder * pricing.single;
+}
+
+function getCartTotal() {
+  return CATEGORY_ORDER.reduce((sum, catId) => sum + calcCategoryTotal(catId), 0);
+}
+
+function getCartCount() {
+  return Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+}
+
+// -------------------------------------------------------------
+// CARREGAR ESTOQUE DA API
+// -------------------------------------------------------------
+async function loadStock() {
+  try {
+    const res = await fetch("/api/stock");
+    const data = await res.json();
+    stock = data.stock || {};
+  } catch (error) {
+    console.warn("Não foi possível carregar o estoque, exibindo tudo disponível.", error);
+    stock = {};
+  }
+}
+
+// -------------------------------------------------------------
+// SELOS DE PREÇO
+// -------------------------------------------------------------
+function renderPricingBadges() {
+  CATEGORY_ORDER.forEach((catId) => {
+    const badge = document.getElementById(`price-badge-${catId}`);
+    if (!badge) return;
+    const { single, pair } = CATEGORY_PRICING[catId];
+    badge.innerHTML = `
+      <div class="inline-flex items-center gap-2 bg-gold-soft/50 border border-gold/50 text-cocoa text-xs font-semibold px-3 py-1.5 rounded-full">
+        <span>1 un. ${formatBRL(single)}</span>
+        <span class="opacity-40">•</span>
+        <span>2 un. ${formatBRL(pair)}</span>
+      </div>
+    `;
+  });
+}
+
+// -------------------------------------------------------------
+// CARDS DE PRODUTO
+// -------------------------------------------------------------
+function createProductCard(product) {
+  const qty = cart[product.id] || 0;
+  const outOfStock = isOutOfStock(product.id);
+  const max = getMaxQty(product.id);
+
+  return `
+    <article class="relative bg-white rounded-2xl border border-cream-line p-4 flex items-center justify-between gap-3 shadow-sm ${outOfStock ? "opacity-50" : ""}">
+      ${outOfStock ? `<span class="absolute -top-2 left-3 bg-cocoa text-cream text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-full">ESGOTADO</span>` : ""}
+      <h3 class="font-display text-lg leading-tight">${product.name}</h3>
+      <div class="flex items-center gap-3 bg-cream-line/60 rounded-full px-1 py-1 shrink-0">
+        <button type="button" data-action="decrease" data-id="${product.id}" ${outOfStock ? "disabled" : ""}
+          class="qty-btn w-8 h-8 rounded-full bg-white text-cocoa font-bold flex items-center justify-center active:scale-90 transition"
+          aria-label="Diminuir quantidade de ${product.name}">−</button>
+        <span id="qty-${product.id}" class="w-5 text-center text-sm font-semibold" aria-live="polite">${qty}</span>
+        <button type="button" data-action="increase" data-id="${product.id}" ${qty >= max ? "disabled" : ""}
+          class="qty-btn w-8 h-8 rounded-full bg-cocoa text-cream font-bold flex items-center justify-center active:scale-90 transition"
+          aria-label="Aumentar quantidade de ${product.name}">+</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderProducts() {
+  CATEGORY_ORDER.forEach((catId) => {
+    const grid = document.getElementById(`grid-${catId}`);
+    if (!grid) return;
+    grid.innerHTML = PRODUCTS.filter((p) => p.category === catId).map(createProductCard).join("");
+  });
+}
+
+function updateCardQty(id) {
+  const qtyEl = document.getElementById(`qty-${id}`);
+  if (!qtyEl) return;
+  const qty = cart[id] || 0;
+  qtyEl.textContent = qty;
+  qtyEl.classList.remove("qty-pulse");
+  void qtyEl.offsetWidth;
+  qtyEl.classList.add("qty-pulse");
+
+  const max = getMaxQty(id);
+  const plusBtn = document.querySelector(`.qty-btn[data-action="increase"][data-id="${id}"]`);
+  if (plusBtn) plusBtn.disabled = qty >= max;
+}
+
+// -------------------------------------------------------------
+// AÇÕES DE QUANTIDADE (delegação de evento)
+// -------------------------------------------------------------
+document.addEventListener("click", (event) => {
+  const btn = event.target.closest(".qty-btn");
+  if (!btn || btn.disabled) return;
+
+  const id = btn.dataset.id;
+  const current = cart[id] || 0;
+
+  if (btn.dataset.action === "increase") {
+    if (current >= getMaxQty(id)) return; // sem estoque suficiente
+    cart[id] = current + 1;
+  } else {
+    const next = Math.max(0, current - 1);
+    if (next === 0) delete cart[id];
+    else cart[id] = next;
+  }
+
+  updateCardQty(id);
+  renderCartSummary();
+});
+
+// -------------------------------------------------------------
+// RESUMO DO CARRINHO (agrupado por categoria)
+// -------------------------------------------------------------
+function renderCartRow(product) {
+  const qty = cart[product.id] || 0;
+  const max = getMaxQty(product.id);
+  return `
+    <div class="flex items-center justify-between gap-3">
+      <p class="text-sm truncate">${product.name}</p>
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" data-action="decrease" data-id="${product.id}"
+          class="qty-btn w-7 h-7 rounded-full bg-cream-line/70 text-cocoa font-bold text-sm" aria-label="Diminuir quantidade de ${product.name}">−</button>
+        <span class="w-4 text-center text-sm font-semibold">${qty}</span>
+        <button type="button" data-action="increase" data-id="${product.id}" ${qty >= max ? "disabled" : ""}
+          class="qty-btn w-7 h-7 rounded-full bg-cocoa text-cream font-bold text-sm" aria-label="Aumentar quantidade de ${product.name}">+</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderGroupedCart(targetElementId, { editable }) {
+  const container = document.getElementById(targetElementId);
+  const categoriesWithItems = CATEGORY_ORDER.filter((catId) => getCategoryQty(catId) > 0);
+
+  container.innerHTML = categoriesWithItems
+    .map((catId) => {
+      const info = CATEGORY_INFO[catId];
+      const items = PRODUCTS.filter((p) => p.category === catId && (cart[p.id] || 0) > 0);
+      const catQty = getCategoryQty(catId);
+      const catTotal = calcCategoryTotal(catId);
+
+      const rows = editable
+        ? items.map(renderCartRow).join("")
+        : items.map((p) => `<div class="flex justify-between"><span>${cart[p.id]}× ${p.name}</span></div>`).join("");
+
+      return `
+        <div class="bg-white rounded-xl border border-cream-line p-4">
+          <p class="text-xs font-semibold text-cocoa-soft uppercase tracking-wide mb-2.5">${info.emoji} ${info.name}</p>
+          <div class="space-y-2.5">${rows}</div>
+          <div class="flex justify-between text-sm font-semibold pt-2.5 mt-2.5 border-t border-dashed border-cream-line">
+            <span>Subtotal (${catQty} un.)</span><span>${formatBRL(catTotal)}</span>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  return categoriesWithItems.length > 0;
+}
+
+function renderCartSummary() {
+  const count = getCartCount();
+  const total = getCartTotal();
+
+  const headerBadge = document.getElementById("header-cart-count");
+  headerBadge.textContent = count;
+  headerBadge.classList.toggle("hidden", count === 0);
+
+  const floatingBar = document.getElementById("floating-bar");
+  document.getElementById("floating-count").textContent = count;
+  document.getElementById("floating-total").textContent = formatBRL(total);
+  floatingBar.classList.toggle("visible", count > 0);
+
+  const hasItems = renderGroupedCart("cart-items", { editable: true });
+  document.getElementById("cart-empty").classList.toggle("hidden", hasItems);
+  document.getElementById("cart-total").textContent = formatBRL(total);
+  document.getElementById("go-to-checkout-btn").disabled = count === 0;
+
+  renderCheckoutSummary();
+}
+
+function renderCheckoutSummary() {
+  renderGroupedCart("checkout-summary", { editable: false });
+  document.getElementById("checkout-total").textContent = formatBRL(getCartTotal());
+}
+
+// -------------------------------------------------------------
+// ABRIR / FECHAR O DRAWER DO CARRINHO
+// -------------------------------------------------------------
+const overlay = document.getElementById("cart-overlay");
+const drawer = document.getElementById("cart-drawer");
+
+function openDrawer() {
+  overlay.classList.add("open");
+  drawer.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeDrawer() {
+  overlay.classList.remove("open");
+  drawer.classList.remove("open");
+  document.body.style.overflow = "";
+  showCartView();
+}
+
+document.getElementById("open-cart-btn").addEventListener("click", openDrawer);
+document.getElementById("floating-bar").addEventListener("click", openDrawer);
+document.getElementById("close-cart-btn").addEventListener("click", closeDrawer);
+overlay.addEventListener("click", closeDrawer);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && drawer.classList.contains("open")) closeDrawer();
+});
+
+// -------------------------------------------------------------
+// ETAPAS "CARRINHO" x "ENTREGA"
+// -------------------------------------------------------------
+const viewCart = document.getElementById("view-cart");
+const viewCheckout = document.getElementById("view-checkout");
+
+function showCartView() {
+  viewCheckout.classList.add("hidden");
+  viewCheckout.classList.remove("flex");
+  viewCart.classList.remove("hidden");
+  viewCart.classList.add("flex");
+}
+
+function showCheckoutView() {
+  renderCheckoutSummary();
+  viewCart.classList.add("hidden");
+  viewCart.classList.remove("flex");
+  viewCheckout.classList.remove("hidden");
+  viewCheckout.classList.add("flex");
+}
+
+document.getElementById("go-to-checkout-btn").addEventListener("click", () => {
+  if (getCartCount() === 0) return;
+  showCheckoutView();
+});
+document.getElementById("back-to-cart-btn").addEventListener("click", showCartView);
+
+// -------------------------------------------------------------
+// ENVIO DO PEDIDO PELO WHATSAPP
+// -------------------------------------------------------------
+function buildWhatsAppMessage(name, address) {
+  const lines = [];
+  lines.push(`Olá, NW Doces&Salgados! 👋`);
+  lines.push(``);
+  lines.push(`Gostaria de fazer o seguinte pedido:`);
+
+  CATEGORY_ORDER.filter((catId) => getCategoryQty(catId) > 0).forEach((catId) => {
+    const info = CATEGORY_INFO[catId];
+    lines.push(``);
+    lines.push(`*${info.emoji} ${info.name}*`);
+    PRODUCTS.filter((p) => p.category === catId && (cart[p.id] || 0) > 0).forEach((p) => {
+      lines.push(`• ${cart[p.id]}x ${p.name}`);
+    });
+    lines.push(`Subtotal: ${formatBRL(calcCategoryTotal(catId))}`);
+  });
+
+  lines.push(``);
+  lines.push(`*Total do pedido: ${formatBRL(getCartTotal())}*`);
+  lines.push(``);
+  lines.push(`*Nome:* ${name}`);
+  lines.push(`*Endereço de entrega:* ${address}`);
+  lines.push(``);
+  lines.push(`Aguardo a confirmação, obrigado(a)!`);
+
+  return lines.join("\n");
+}
+
+document.getElementById("send-whatsapp-btn").addEventListener("click", () => {
+  const nameInput = document.getElementById("customer-name");
+  const addressInput = document.getElementById("customer-address");
+  const errorName = document.getElementById("error-name");
+  const errorAddress = document.getElementById("error-address");
+
+  const name = nameInput.value.trim();
+  const address = addressInput.value.trim();
+
+  let hasError = false;
+  if (!name) { errorName.classList.remove("hidden"); hasError = true; } else { errorName.classList.add("hidden"); }
+  if (!address) { errorAddress.classList.remove("hidden"); hasError = true; } else { errorAddress.classList.add("hidden"); }
+  if (getCartCount() === 0) { hasError = true; showCartView(); }
+
+  if (hasError) return;
+
+  const message = buildWhatsAppMessage(name, address);
+  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  window.open(url, "_blank");
+});
+
+// -------------------------------------------------------------
+// INICIALIZAÇÃO
+// -------------------------------------------------------------
+(async function init() {
+  renderPricingBadges();
+  await loadStock();
+  renderProducts();
+  renderCartSummary();
+})();
+</script>
+
+</body>
+</html>
