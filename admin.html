@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Estoque — NW Doces&Salgados</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="tailwind.css">
+
+<style>
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #FFF6EF; }
+  .font-display { font-family: 'Fraunces', serif; }
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid #B33951; outline-offset: 2px; border-radius: 4px;
+  }
+  input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
+</style>
+</head>
+
+<body class="text-cocoa antialiased min-h-screen">
+
+<header class="sticky top-0 z-20 bg-cocoa text-cream shadow-md">
+  <div class="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl" aria-hidden="true">📦</span>
+      <p class="font-display text-lg leading-none">Painel de Estoque</p>
+    </div>
+    <a href="/index.html" class="text-xs underline underline-offset-2 text-cream/70">Ver loja</a>
+  </div>
+</header>
+
+<!-- =========================================================
+     TELA 1: LOGIN COM SENHA
+========================================================= -->
+<div id="login-screen" class="max-w-sm mx-auto px-5 pt-16">
+  <h1 class="font-display text-2xl mb-1">Entrar no painel</h1>
+  <p class="text-cocoa-soft text-sm mb-6">Digite a senha para editar o estoque.</p>
+
+  <form id="login-form" class="space-y-3">
+    <input id="password-input" type="password" required autocomplete="current-password"
+      placeholder="Senha do painel"
+      class="w-full border border-cream-line bg-white rounded-xl px-4 py-3 text-sm">
+    <button type="submit" id="login-btn"
+      class="w-full bg-berry hover:bg-berry-dark text-cream font-semibold py-3 rounded-full transition active:scale-[0.98]">
+      Entrar
+    </button>
+    <p id="login-error" class="text-berry text-sm hidden"></p>
+  </form>
+</div>
+
+<!-- =========================================================
+     TELA 2: PAINEL DE EDIÇÃO (só aparece após senha correta)
+========================================================= -->
+<main id="panel-screen" class="hidden max-w-2xl mx-auto px-5 pt-6 pb-28">
+  <div class="mb-5">
+    <h1 class="font-display text-2xl">Quantidade em estoque</h1>
+    <p class="text-cocoa-soft text-sm mt-1">
+      Deixe em branco para <strong>sem controle</strong> (sempre disponível).
+      Coloque <strong>0</strong> para marcar como esgotado.
+    </p>
+  </div>
+
+  <div id="stock-loading" class="text-cocoa-soft text-sm">Carregando estoque atual…</div>
+  <div id="categories-container" class="space-y-6"></div>
+</main>
+
+<!-- Barra fixa de salvar -->
+<div id="save-bar" class="hidden fixed left-0 right-0 bottom-0 z-30 bg-cream border-t border-cream-line px-5 py-4">
+  <div class="max-w-2xl mx-auto flex items-center gap-3">
+    <p id="save-status" class="text-sm text-cocoa-soft flex-1"></p>
+    <button id="save-btn" type="button"
+      class="bg-cocoa hover:bg-cocoa-soft text-cream font-semibold px-6 py-3 rounded-full transition active:scale-[0.98] disabled:opacity-50">
+      Salvar alterações
+    </button>
+  </div>
+</div>
+
+<!-- Config compartilhada (mesmo catálogo da loja) -->
+<script src="products-data.js"></script>
+
+<script>
+/* =============================================================
+   PAINEL — login por senha + edição do estoque
+============================================================= */
+
+const SESSION_KEY = "nw_admin_password";
+let currentStock = {};
+
+// -------------------------------------------------------------
+// LOGIN
+// -------------------------------------------------------------
+async function checkPassword(password) {
+  const res = await fetch("/api/verify-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  return res.ok;
+}
+
+async function tryEnterPanel(password) {
+  const loginBtn = document.getElementById("login-btn");
+  const errorEl = document.getElementById("login-error");
+  loginBtn.disabled = true;
+  loginBtn.textContent = "Verificando…";
+  errorEl.classList.add("hidden");
+
+  try {
+    const ok = await checkPassword(password);
+    if (!ok) {
+      errorEl.textContent = "Senha incorreta. Tente novamente.";
+      errorEl.classList.remove("hidden");
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Entrar";
+      return;
+    }
+    sessionStorage.setItem(SESSION_KEY, password);
+    showPanel();
+  } catch (error) {
+    errorEl.textContent = "Não foi possível conectar agora. Tente novamente.";
+    errorEl.classList.remove("hidden");
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Entrar";
+  }
+}
+
+document.getElementById("login-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const password = document.getElementById("password-input").value;
+  if (password) tryEnterPanel(password);
+});
+
+function getStoredPassword() {
+  return sessionStorage.getItem(SESSION_KEY);
+}
+
+// -------------------------------------------------------------
+// MOSTRAR PAINEL E CARREGAR ESTOQUE ATUAL
+// -------------------------------------------------------------
+async function showPanel() {
+  document.getElementById("login-screen").classList.add("hidden");
+  document.getElementById("panel-screen").classList.remove("hidden");
+  document.getElementById("save-bar").classList.remove("hidden");
+
+  try {
+    const res = await fetch("/api/stock");
+    const data = await res.json();
+    currentStock = data.stock || {};
+  } catch (error) {
+    currentStock = {};
+  }
+
+  document.getElementById("stock-loading").classList.add("hidden");
+  renderCategories();
+}
+
+function renderCategories() {
+  const container = document.getElementById("categories-container");
+  container.innerHTML = CATEGORY_ORDER.map((catId) => {
+    const info = CATEGORY_INFO[catId];
+    const items = PRODUCTS.filter((p) => p.category === catId);
+
+    const rows = items
+      .map((p) => {
+        const value = Object.prototype.hasOwnProperty.call(currentStock, p.id) ? currentStock[p.id] : "";
+        return `
+          <div class="flex items-center justify-between gap-3 py-3 border-b border-cream-line last:border-b-0">
+            <p class="text-sm">${p.name}</p>
+            <div class="flex items-center gap-2 shrink-0">
+              <button type="button" data-quick="esgotado" data-id="${p.id}"
+                class="quick-btn text-[11px] font-semibold px-2.5 py-1.5 rounded-full bg-cocoa/5 text-cocoa-soft hover:bg-cocoa/10">Esgotado</button>
+              <button type="button" data-quick="ilimitado" data-id="${p.id}"
+                class="quick-btn text-[11px] font-semibold px-2.5 py-1.5 rounded-full bg-cocoa/5 text-cocoa-soft hover:bg-cocoa/10">Ilimitado</button>
+              <input type="number" min="0" inputmode="numeric" data-stock-input data-id="${p.id}"
+                value="${value}" placeholder="∞"
+                class="w-16 text-center border border-cream-line rounded-lg px-2 py-1.5 text-sm">
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    return `
+      <section class="bg-white rounded-2xl border border-cream-line p-4">
+        <p class="font-display text-lg mb-1">${info.emoji} ${info.name}</p>
+        <div>${rows}</div>
+      </section>
+    `;
+  }).join("");
+}
+
+// Botões rápidos "Esgotado" / "Ilimitado"
+document.addEventListener("click", (event) => {
+  const btn = event.target.closest(".quick-btn");
+  if (!btn) return;
+  const input = document.querySelector(`input[data-stock-input][data-id="${btn.dataset.id}"]`);
+  if (!input) return;
+  input.value = btn.dataset.quick === "esgotado" ? "0" : "";
+});
+
+// -------------------------------------------------------------
+// SALVAR
+// -------------------------------------------------------------
+function collectStockFromInputs() {
+  const stock = {};
+  document.querySelectorAll("input[data-stock-input]").forEach((input) => {
+    const raw = input.value.trim();
+    if (raw === "") return; // em branco = ilimitado (não entra no objeto)
+    const num = Math.max(0, parseInt(raw, 10) || 0);
+    stock[input.dataset.id] = num;
+  });
+  return stock;
+}
+
+document.getElementById("save-btn").addEventListener("click", async () => {
+  const saveBtn = document.getElementById("save-btn");
+  const status = document.getElementById("save-status");
+  const password = getStoredPassword();
+
+  if (!password) {
+    status.textContent = "Sessão expirou — recarregue a página e faça login de novo.";
+    status.className = "text-sm text-berry flex-1";
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Salvando…";
+  status.textContent = "";
+
+  try {
+    const stock = collectStockFromInputs();
+    const res = await fetch("/api/stock", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-password": password,
+      },
+      body: JSON.stringify({ stock }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Erro ao salvar.");
+    }
+
+    currentStock = stock;
+    status.textContent = "Estoque salvo com sucesso ✓";
+    status.className = "text-sm text-cocoa-soft flex-1";
+  } catch (error) {
+    status.textContent = error.message || "Não foi possível salvar agora.";
+    status.className = "text-sm text-berry flex-1";
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Salvar alterações";
+  }
+});
+
+// -------------------------------------------------------------
+// INICIALIZAÇÃO — se já tem senha guardada nesta aba, entra direto
+// -------------------------------------------------------------
+(function init() {
+  const stored = getStoredPassword();
+  if (stored) {
+    checkPassword(stored).then((ok) => {
+      if (ok) showPanel();
+      else sessionStorage.removeItem(SESSION_KEY);
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
