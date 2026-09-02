@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Estoque — NW Doces&Salgados</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="tailwind.css">
+
+<style>
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #FFF6EF; }
+  .font-display { font-family: 'Fraunces', serif; }
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid #B33951; outline-offset: 2px; border-radius: 4px;
+  }
+  input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
+
+  /* Abas Estoque / Faturamento */
+  .tab-btn { background: rgba(58,37,25,0.05); color: #6B4B3A; }
+  .tab-btn.tab-active { background: #3A2519; color: #FFF6EF; }
+
+  /* Selo de status do pedido */
+  .order-badge { font-size: 11px; font-weight: 600; padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
+  .order-badge-pending { background: rgba(58,37,25,0.05); color: #6B4B3A; }
+  .order-badge-confirmed { background: hsla(41,69%,82%,.5); color: #3A2519; }
+</style>
+</head>
+
+<body class="text-cocoa antialiased min-h-screen">
+
+<header class="sticky top-0 z-20 bg-cocoa text-cream shadow-md">
+  <div class="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl" aria-hidden="true">📦</span>
+      <p class="font-display text-lg leading-none">Painel de Estoque</p>
+    </div>
+    <a href="/index.html" class="text-xs underline underline-offset-2 text-cream/70">Ver loja</a>
+  </div>
+</header>
+
+<!-- =========================================================
+     TELA 1: LOGIN COM SENHA
+========================================================= -->
+<div id="login-screen" class="max-w-sm mx-auto px-5 pt-16">
+  <h1 class="font-display text-2xl mb-1">Entrar no painel</h1>
+  <p class="text-cocoa-soft text-sm mb-6">Digite a senha para editar o estoque.</p>
+
+  <form id="login-form" class="space-y-3">
+    <input id="password-input" type="password" required autocomplete="current-password"
+      placeholder="Senha do painel"
+      class="w-full border border-cream-line bg-white rounded-xl px-4 py-3 text-sm">
+    <button type="submit" id="login-btn"
+      class="w-full bg-berry hover:bg-berry-dark text-cream font-semibold py-3 rounded-full transition active:scale-[0.98]">
+      Entrar
+    </button>
+    <p id="login-error" class="text-berry text-sm hidden"></p>
+  </form>
+</div>
+
+<!-- =========================================================
+     TELA 2: PAINEL DE EDIÇÃO (só aparece após senha correta)
+========================================================= -->
+<main id="panel-screen" class="hidden max-w-2xl mx-auto px-5 pt-6 pb-28">
+
+  <div class="flex gap-2 mb-6">
+    <button type="button" data-tab="estoque" class="tab-btn flex-1 text-sm font-semibold px-4 py-3 rounded-full transition">
+      📦 Estoque
+    </button>
+    <button type="button" data-tab="faturamento" class="tab-btn flex-1 text-sm font-semibold px-4 py-3 rounded-full transition">
+      💰 Faturamento
+    </button>
+  </div>
+
+  <!-- =========================================================
+       ABA: ESTOQUE
+  ========================================================= -->
+  <section id="tab-estoque">
+    <div class="mb-5">
+      <h1 class="font-display text-2xl">Quantidade em estoque</h1>
+      <p class="text-cocoa-soft text-sm mt-1">
+        Deixe em branco para <strong>sem controle</strong> (sempre disponível).
+        Coloque <strong>0</strong> para marcar como esgotado.
+      </p>
+    </div>
+
+    <div id="stock-loading" class="text-cocoa-soft text-sm">Carregando estoque atual…</div>
+    <div id="categories-container" class="space-y-6"></div>
+  </section>
+
+  <!-- =========================================================
+       ABA: FATURAMENTO
+  ========================================================= -->
+  <section id="tab-faturamento" class="hidden">
+    <div class="mb-5">
+      <h1 class="font-display text-2xl">Faturamento</h1>
+      <p class="text-cocoa-soft text-sm mt-1">
+        Pedidos enviados pela loja aparecem aqui como <strong>pendentes</strong>.
+        Confirme só depois que o pagamento cair — aí sim ele desconta do
+        estoque e entra no total abaixo.
+      </p>
+    </div>
+
+    <div id="orders-loading" class="text-cocoa-soft text-sm">Carregando pedidos…</div>
+
+    <div id="orders-content" class="hidden space-y-6">
+      <div class="bg-cocoa rounded-2xl p-4 text-cream">
+        <p class="text-sm text-cream/70 mb-1">Faturamento confirmado</p>
+        <p id="revenue-total" class="font-display text-3xl">R$ 0,00</p>
+        <p id="revenue-count" class="text-xs text-cream/70 mt-1"></p>
+      </div>
+
+      <div>
+        <p class="font-display text-lg mb-2">Pedidos pendentes</p>
+        <div id="pending-orders-list" class="space-y-3"></div>
+        <p id="pending-empty" class="text-cocoa-soft text-sm hidden">Nenhum pedido pendente no momento.</p>
+      </div>
+
+      <div>
+        <p class="font-display text-lg mb-2">Vendas confirmadas</p>
+        <div id="confirmed-orders-list" class="space-y-3"></div>
+        <p id="confirmed-empty" class="text-cocoa-soft text-sm hidden">Nenhuma venda confirmada ainda.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Barra fixa de salvar -->
+<div id="save-bar" class="hidden fixed left-0 right-0 bottom-0 z-30 bg-cream border-t border-cream-line px-5 py-4">
+  <div class="max-w-2xl mx-auto flex items-center gap-3">
+    <p id="save-status" class="text-sm text-cocoa-soft flex-1"></p>
+    <button id="save-btn" type="button"
+      class="bg-cocoa hover:bg-cocoa-soft text-cream font-semibold px-6 py-3 rounded-full transition active:scale-[0.98] disabled:opacity-50">
+      Salvar alterações
+    </button>
+  </div>
+</div>
+
+<!-- Config compartilhada (mesmo catálogo da loja) -->
+<script src="products-data.js"></script>
+
+<script>
+/* =============================================================
+   PAINEL — login por senha + edição do estoque
+============================================================= */
+
+const SESSION_KEY = "nw_admin_password";
+let currentStock = {};
+
+// -------------------------------------------------------------
+// LOGIN
+// -------------------------------------------------------------
+async function checkPassword(password) {
+  const res = await fetch("/api/verify-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  return res.ok;
+}
+
+async function tryEnterPanel(password) {
+  const loginBtn = document.getElementById("login-btn");
+  const errorEl = document.getElementById("login-error");
+  loginBtn.disabled = true;
+  loginBtn.textContent = "Verificando…";
+  errorEl.classList.add("hidden");
+
+  try {
+    const ok = await checkPassword(password);
+    if (!ok) {
+      errorEl.textContent = "Senha incorreta. Tente novamente.";
+      errorEl.classList.remove("hidden");
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Entrar";
+      return;
+    }
+    sessionStorage.setItem(SESSION_KEY, password);
+    showPanel();
+  } catch (error) {
+    errorEl.textContent = "Não foi possível conectar agora. Tente novamente.";
+    errorEl.classList.remove("hidden");
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Entrar";
+  }
+}
+
+document.getElementById("login-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const password = document.getElementById("password-input").value;
+  if (password) tryEnterPanel(password);
+});
+
+function getStoredPassword() {
+  return sessionStorage.getItem(SESSION_KEY);
+}
+
+// -------------------------------------------------------------
+// MOSTRAR PAINEL E CARREGAR ESTOQUE ATUAL
+// -------------------------------------------------------------
+async function showPanel() {
+  document.getElementById("login-screen").classList.add("hidden");
+  document.getElementById("panel-screen").classList.remove("hidden");
+  document.getElementById("save-bar").classList.remove("hidden");
+  switchTab("estoque");
+
+  try {
+    const res = await fetch("/api/stock");
+    const data = await res.json();
+    currentStock = data.stock || {};
+  } catch (error) {
+    currentStock = {};
+  }
+
+  document.getElementById("stock-loading").classList.add("hidden");
+  renderCategories();
+}
+
+function renderCategories() {
+  const container = document.getElementById("categories-container");
+  container.innerHTML = CATEGORY_ORDER.map((catId) => {
+    const info = CATEGORY_INFO[catId];
+    const items = PRODUCTS.filter((p) => p.category === catId);
+
+    const rows = items
+      .map((p) => {
+        const value = Object.prototype.hasOwnProperty.call(currentStock, p.id) ? currentStock[p.id] : "";
+        return `
+          <div class="flex items-center justify-between gap-3 py-3 border-b border-cream-line last:border-b-0">
+            <p class="text-sm">${p.name}</p>
+            <div class="flex items-center gap-2 shrink-0">
+              <button type="button" data-quick="esgotado" data-id="${p.id}"
+                class="quick-btn text-[11px] font-semibold px-2.5 py-1.5 rounded-full bg-cocoa/5 text-cocoa-soft hover:bg-cocoa/10">Esgotado</button>
+              <button type="button" data-quick="ilimitado" data-id="${p.id}"
+                class="quick-btn text-[11px] font-semibold px-2.5 py-1.5 rounded-full bg-cocoa/5 text-cocoa-soft hover:bg-cocoa/10">Ilimitado</button>
+              <input type="number" min="0" inputmode="numeric" data-stock-input data-id="${p.id}"
+                value="${value}" placeholder="∞"
+                class="w-16 text-center border border-cream-line rounded-lg px-2 py-1.5 text-sm">
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    return `
+      <section class="bg-white rounded-2xl border border-cream-line p-4">
+        <p class="font-display text-lg mb-1">${info.emoji} ${info.name}</p>
+        <div>${rows}</div>
+      </section>
+    `;
+  }).join("");
+}
+
+// Botões rápidos "Esgotado" / "Ilimitado"
+document.addEventListener("click", (event) => {
+  const btn = event.target.closest(".quick-btn");
+  if (!btn) return;
+  const input = document.querySelector(`input[data-stock-input][data-id="${btn.dataset.id}"]`);
+  if (!input) return;
+  input.value = btn.dataset.quick === "esgotado" ? "0" : "";
+});
+
+// -------------------------------------------------------------
+// SALVAR
+// -------------------------------------------------------------
+function collectStockFromInputs() {
+  const stock = {};
+  document.querySelectorAll("input[data-stock-input]").forEach((input) => {
+    const raw = input.value.trim();
+    if (raw === "") return; // em branco = ilimitado (não entra no objeto)
+    const num = Math.max(0, parseInt(raw, 10) || 0);
+    stock[input.dataset.id] = num;
+  });
+  return stock;
+}
+
+document.getElementById("save-btn").addEventListener("click", async () => {
+  const saveBtn = document.getElementById("save-btn");
+  const status = document.getElementById("save-status");
+  const password = getStoredPassword();
+
+  if (!password) {
+    status.textContent = "Sessão expirou — recarregue a página e faça login de novo.";
+    status.className = "text-sm text-berry flex-1";
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Salvando…";
+  status.textContent = "";
+
+  try {
+    const stock = collectStockFromInputs();
+    const res = await fetch("/api/stock", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-password": password,
+      },
+      body: JSON.stringify({ stock }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Erro ao salvar.");
+    }
+
+    currentStock = stock;
+    status.textContent = "Estoque salvo com sucesso ✓";
+    status.className = "text-sm text-cocoa-soft flex-1";
+  } catch (error) {
+    status.textContent = error.message || "Não foi possível salvar agora.";
+    status.className = "text-sm text-berry flex-1";
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Salvar alterações";
+  }
+});
+
+// -------------------------------------------------------------
+// ABAS (Estoque / Faturamento)
+// -------------------------------------------------------------
+let ordersLoadedOnce = false;
+
+function switchTab(tab) {
+  document.getElementById("tab-estoque").classList.toggle("hidden", tab !== "estoque");
+  document.getElementById("tab-faturamento").classList.toggle("hidden", tab !== "faturamento");
+  document.getElementById("save-bar").classList.toggle("hidden", tab !== "estoque");
+
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.classList.toggle("tab-active", btn.dataset.tab === tab);
+  });
+
+  if (tab === "faturamento" && !ordersLoadedOnce) {
+    ordersLoadedOnce = true;
+    loadOrders();
+  }
+}
+
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+});
+
+// -------------------------------------------------------------
+// FATURAMENTO — carregar e mostrar pedidos
+// -------------------------------------------------------------
+function formatBRL(value) {
+  return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatDateTime(iso) {
+  try {
+    return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  } catch (error) {
+    return "";
+  }
+}
+
+function itemsToLines(items) {
+  return Object.entries(items || {})
+    .map(([id, qty]) => {
+      const product = PRODUCTS.find((p) => p.id === id);
+      const name = product ? product.name : id;
+      return `<div class="flex justify-between"><span>${qty}× ${name}</span></div>`;
+    })
+    .join("");
+}
+
+async function loadOrders() {
+  const password = getStoredPassword();
+  document.getElementById("orders-loading").classList.remove("hidden");
+  document.getElementById("orders-content").classList.add("hidden");
+
+  try {
+    const res = await fetch("/api/orders", {
+      headers: { "x-admin-password": password },
+    });
+    if (!res.ok) throw new Error("Não foi possível carregar os pedidos.");
+    const data = await res.json();
+    renderOrders(data.orders || []);
+  } catch (error) {
+    document.getElementById("orders-loading").textContent =
+      "Não foi possível carregar os pedidos agora. Tente recarregar a página.";
+    return;
+  }
+
+  document.getElementById("orders-loading").classList.add("hidden");
+  document.getElementById("orders-content").classList.remove("hidden");
+}
+
+function renderOrders(orders) {
+  const pending = orders.filter((o) => o.status === "pending");
+  const confirmed = orders.filter((o) => o.status === "confirmed");
+
+  const revenueTotal = confirmed.reduce((sum, o) => sum + (o.total || 0), 0);
+  document.getElementById("revenue-total").textContent = formatBRL(revenueTotal);
+  document.getElementById("revenue-count").textContent =
+    confirmed.length === 1 ? "1 venda confirmada" : `${confirmed.length} vendas confirmadas`;
+
+  // ---- Pendentes ----
+  const pendingList = document.getElementById("pending-orders-list");
+  document.getElementById("pending-empty").classList.toggle("hidden", pending.length > 0);
+  pendingList.innerHTML = pending
+    .map(
+      (o) => `
+      <div class="bg-white rounded-2xl border border-cream-line p-4 space-y-3">
+        <div class="flex justify-between items-center">
+          <p class="text-sm font-semibold">${o.customerName || "Sem nome"}</p>
+          <span class="order-badge order-badge-pending">Pendente</span>
+        </div>
+        <p class="text-xs text-cocoa-soft">${formatDateTime(o.createdAt)}</p>
+        <div class="text-sm space-y-2">${itemsToLines(o.items)}</div>
+        <div class="flex justify-between items-center border-t border-cream-line pt-3">
+          <span class="text-sm font-semibold">Total</span>
+          <span class="text-sm font-semibold">${formatBRL(o.total)}</span>
+        </div>
+        <div class="flex justify-between gap-3">
+          <button type="button" data-action="cancel" data-id="${o.id}"
+            class="order-action-btn flex-1 text-sm font-semibold px-4 py-3 rounded-full border border-cream-line text-cocoa-soft hover:bg-cocoa/10 transition active:scale-[0.98]">
+            Cancelar
+          </button>
+          <button type="button" data-action="confirm" data-id="${o.id}"
+            class="order-action-btn flex-1 text-sm font-semibold px-4 py-3 rounded-full bg-cocoa hover:bg-cocoa-soft text-cream transition active:scale-[0.98]">
+            Confirmar venda
+          </button>
+        </div>
+      </div>`
+    )
+    .join("");
+
+  // ---- Confirmadas ----
+  const confirmedList = document.getElementById("confirmed-orders-list");
+  document.getElementById("confirmed-empty").classList.toggle("hidden", confirmed.length > 0);
+  confirmedList.innerHTML = confirmed
+    .slice() // mais recentes primeiro
+    .sort((a, b) => new Date(b.confirmedAt) - new Date(a.confirmedAt))
+    .map(
+      (o) => `
+      <div class="bg-white rounded-2xl border border-cream-line p-4 space-y-2">
+        <div class="flex justify-between items-center">
+          <p class="text-sm font-semibold">${o.customerName || "Sem nome"}</p>
+          <span class="order-badge order-badge-confirmed">Confirmada</span>
+        </div>
+        <p class="text-xs text-cocoa-soft">${formatDateTime(o.confirmedAt)}</p>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-cocoa-soft">${Object.values(o.items || {}).reduce((s, q) => s + Number(q || 0), 0)} item(ns)</span>
+          <span class="text-sm font-semibold">${formatBRL(o.total)}</span>
+        </div>
+      </div>`
+    )
+    .join("");
+}
+
+// Confirmar / cancelar pedido
+document.addEventListener("click", async (event) => {
+  const btn = event.target.closest(".order-action-btn");
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+  const id = btn.dataset.id;
+  const password = getStoredPassword();
+
+  if (action === "cancel" && !confirm("Cancelar este pedido? Ele não vai entrar no faturamento.")) {
+    return;
+  }
+
+  document.querySelectorAll(`[data-id="${id}"]`).forEach((el) => (el.disabled = true));
+
+  try {
+    const res = await fetch("/api/orders", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-password": password,
+      },
+      body: JSON.stringify({ id, action }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Não foi possível atualizar o pedido.");
+    }
+    await loadOrders();
+  } catch (error) {
+    alert(error.message || "Não foi possível atualizar o pedido agora.");
+    document.querySelectorAll(`[data-id="${id}"]`).forEach((el) => (el.disabled = false));
+  }
+});
+
+// -------------------------------------------------------------
+// INICIALIZAÇÃO — se já tem senha guardada nesta aba, entra direto
+// -------------------------------------------------------------
+(function init() {
+  const stored = getStoredPassword();
+  if (stored) {
+    checkPassword(stored).then((ok) => {
+      if (ok) showPanel();
+      else sessionStorage.removeItem(SESSION_KEY);
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
